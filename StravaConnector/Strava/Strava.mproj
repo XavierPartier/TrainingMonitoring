@@ -66,12 +66,12 @@
     <Compile Include="resources.resx">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="client_id">
+    <Content Include="client_id.txt">
       <SubType>Content</SubType>
-    </Compile>
-    <Compile Include="client_secret">
+    </Content>
+    <Content Include="client_secret.txt">
       <SubType>Content</SubType>
-    </Compile>
+    </Content>
     <Content Include="README.md">
       <SubType>Content</SubType>
     </Content>
