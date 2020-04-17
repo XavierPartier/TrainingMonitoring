@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26403.3
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30011.22
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{4DF76451-A46A-4C0B-BE03-459FAAFA07E6}") = "Strava", "Strava\Strava.mproj", "{745C8EA0-5636-4E4B-A37C-647C6F4999D5}"
 EndProject
@@ -18,5 +18,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {21A200ED-8E5A-4B97-AF30-5E21298C0789}
 	EndGlobalSection
 EndGlobal
