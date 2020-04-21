@@ -16,6 +16,9 @@ api_uri = "https://www.strava.com/api/v3/";
 activity_uri = "athlete/activities";
 athlete_uri = "athlete";
 
+stream_uri1 = "activities/";
+stream_uri2 = "/streams";
+
 // default page size, using the MAX page size to limit the amount of calls to the API
 page_size = 200;
 
@@ -74,7 +77,9 @@ StravaData.NavTable = () as table =>
     let
         source = #table({"Name", "Data"}, {
             { "Athlete", StravaData.GetObject(athlete_uri,"Athlete")},
-            { "Activities", StravaData.GetObject(activity_uri,"Activities") }
+            //{ "Activities", StravaData.GetObject(activity_uri,"Activities")},
+            { "StreamsBis", StravaData.GetObject(activity_uri, "StreamsBis")},
+            { "Streams", StravaData.GetStream(stream_uri1, "3318303283", stream_uri2, "Streams") }
         }),
 
         // add other columns
@@ -82,15 +87,23 @@ StravaData.NavTable = () as table =>
         withItemName = Table.AddColumn(withItemKind, "ItemName", each "Table"),
         withIsLeaf = Table.AddColumn(withItemName, "IsLeaf", each true),
 
-        functionTable = AddNavTableFunctions({[Name = "GetObjects", Data = StravaData.GetObject]}),
+        functionTable1 = AddNavTableFunctions({[Name = "GetObjects", Data = StravaData.GetObject]}),
+        functionTable2 = AddNavTableFunctions({[Name = "GetStreams", Data = StravaData.GetStream]}),
 
-        withFunction = Table.InsertRows(withIsLeaf, Table.RowCount(withIsLeaf) - 1, {[ 
+        withFunction = Table.InsertRows(withIsLeaf, Table.RowCount(withIsLeaf), {[ 
             Name = "Functions",
-            Data = functionTable,
+            Data = functionTable1,
             ItemKind = "Folder",
             ItemName = "Folder",
             IsLeaf = false
-        ]}),
+        ],[ 
+            Name = "FunctionsStream",
+            Data = functionTable2,
+            ItemKind = "Folder",
+            ItemName = "Folder",
+            IsLeaf = false
+        ]
+        }),
         
         navTable = Table.ToNavigationTable(withFunction, {"Name"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
@@ -103,7 +116,7 @@ StravaData.NavTable = () as table =>
     let
         ConvertToTable = Table.FromList(json, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
         #"Expanded Column1" = Table.ExpandRecordColumn( ConvertToTable, "Column1", {"id", "resource_state", "external_id", "upload_id", "athlete", "name", "distance", "moving_time", "elapsed_time", "total_elevation_gain", "type", "start_date", "start_date_local", "timezone", "utc_offset", "start_latlng", "end_latlng", "location_city", "location_state", "location_country", "start_latitude", "start_longitude", "achievement_count", "kudos_count", "comment_count", "athlete_count", "photo_count", "map", "trainer", "commute", "manual", "private", "flagged", "gear_id", "average_speed", "max_speed", "average_cadence", "average_temp", "average_watts", "kilojoules", "device_watts", "has_heartrate", "average_heartrate", "max_heartrate", "elev_high", "elev_low", "pr_count", "total_photo_count", "has_kudoed", "workout_type", "weighted_average_watts", "max_watts"}, {"id", "resource_state", "external_id", "upload_id", "athlete", "name", "distance", "moving_time", "elapsed_time", "total_elevation_gain", "type", "start_date", "start_date_local", "timezone", "utc_offset", "start_latlng", "end_latlng", "location_city", "location_state", "location_country", "start_latitude", "start_longitude", "achievement_count", "kudos_count", "comment_count", "athlete_count", "photo_count", "map", "trainer", "commute", "manual", "private", "flagged", "gear_id", "average_speed", "max_speed", "average_cadence", "average_temp", "average_watts", "kilojoules", "device_watts", "has_heartrate", "average_heartrate", "max_heartrate", "elev_high", "elev_low", "pr_count", "total_photo_count", "has_kudoed", "workout_type", "weighted_average_watts", "max_watts"}),
-        #"Removed Columns" = Table.RemoveColumns(#"Expanded Column1",{"id", "resource_state", "upload_id", "athlete", "start_latlng", "end_latlng", "location_city", "location_state", "photo_count", "map", "total_photo_count", "external_id"}),
+        #"Removed Columns" = Table.RemoveColumns(#"Expanded Column1",{"resource_state", "upload_id", "athlete", "start_latlng", "end_latlng", "photo_count", "total_photo_count", "external_id"}),
         #"Changed Type" = Table.TransformColumnTypes(#"Removed Columns",{{"total_elevation_gain", Int64.Type}, {"elapsed_time", Int64.Type}, {"moving_time", Int64.Type}, {"distance", type number}}),
         #"Renamed Columns" = Table.RenameColumns(#"Changed Type",{{"start_date", "start_datetime"}}),
         #"Duplicated Column" = Table.DuplicateColumn(#"Renamed Columns", "start_datetime", "start_datetime - Copy"),
@@ -111,10 +124,8 @@ StravaData.NavTable = () as table =>
         #"Extracted Date" = Table.TransformColumns(#"Changed Type1",{{"start_datetime - Copy", DateTime.Date}}),
         #"Renamed Columns1" = Table.RenameColumns(#"Extracted Date",{{"start_datetime - Copy", "start_date"}}),
         #"Reordered Columns" = Table.ReorderColumns(#"Renamed Columns1",{"name", "distance", "moving_time", "elapsed_time", "total_elevation_gain", "type", "start_datetime", "start_date", "start_date_local", "timezone", "utc_offset", "location_country", "start_latitude", "start_longitude", "achievement_count", "kudos_count", "comment_count", "athlete_count", "trainer", "commute", "manual", "private", "flagged", "gear_id", "average_speed", "max_speed", "average_cadence", "average_temp", "average_watts", "kilojoules", "device_watts", "has_heartrate", "average_heartrate", "max_heartrate", "elev_high", "elev_low", "pr_count", "has_kudoed", "workout_type", "weighted_average_watts", "max_watts"}),
-        #"Removed Columns1" = Table.RemoveColumns(#"Reordered Columns",{"start_date_local", "timezone", "utc_offset"}),
-        #"Changed Type2" = Table.TransformColumnTypes(#"Removed Columns1",{{"start_latitude", type number}, {"start_longitude", type number}, {"achievement_count", Int64.Type}, {"kudos_count", Int64.Type}, {"comment_count", Int64.Type}, {"athlete_count", Int64.Type}, {"trainer", type logical}, {"commute", type logical}, {"manual", type logical}, {"private", type logical}, {"flagged", type logical}, {"average_speed", type number}, {"max_speed", type number}, {"average_cadence", type number}, {"average_temp", type number}, {"average_watts", type number}, {"kilojoules", type number}, {"device_watts", type logical}, {"has_heartrate", type logical}, {"average_heartrate", type number}, {"max_heartrate", Int64.Type}, {"elev_high", type number}, {"elev_low", type number}, {"pr_count", Int64.Type}}),
-        #"Removed Columns2" = Table.RemoveColumns(#"Changed Type2",{"workout_type"}),
-        #"Changed Type3" = Table.TransformColumnTypes(#"Removed Columns2",{{"has_kudoed", type logical}, {"weighted_average_watts", Int64.Type}, {"max_watts", Int64.Type}}),
+        #"Changed Type2" = Table.TransformColumnTypes(#"Reordered Columns",{{"start_latitude", type number}, {"start_longitude", type number}, {"achievement_count", Int64.Type}, {"kudos_count", Int64.Type}, {"comment_count", Int64.Type}, {"athlete_count", Int64.Type}, {"trainer", type logical}, {"commute", type logical}, {"manual", type logical}, {"private", type logical}, {"flagged", type logical}, {"average_speed", type number}, {"max_speed", type number}, {"average_cadence", type number}, {"average_temp", type number}, {"average_watts", type number}, {"kilojoules", type number}, {"device_watts", type logical}, {"has_heartrate", type logical}, {"average_heartrate", type number}, {"max_heartrate", Int64.Type}, {"elev_high", type number}, {"elev_low", type number}, {"pr_count", Int64.Type}}),
+        #"Changed Type3" = Table.TransformColumnTypes(#"Changed Type2",{{"has_kudoed", type logical}, {"weighted_average_watts", Int64.Type}, {"max_watts", Int64.Type}}),
         #"Changed Typedt" = Table.TransformColumnTypes(#"Changed Type3",{{"start_datetime", type datetime}}),
         #"Changed Type1t" = Table.TransformColumnTypes(#"Changed Typedt",{{"start_datetime", type time}}),
         #"Duplicated Column2" = Table.RenameColumns(#"Changed Type1t", {{"start_datetime", "start_time"}}),
@@ -126,11 +137,32 @@ in
 //Parse the Athlete by json
 StravaData.Athlete = (json) =>
     let
-         ConvertToTable = Table.FromList(json, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+        ConvertToTable = Table.FromList(json, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
         tableresult = Record.ToTable(ConvertToTable),
         result = Table.Pivot(tableresult, List.Distinct(tableresult[Name]), "Name", "Value")
 in
    result;
+
+
+//Parse the streams by json
+ StravaData.Streams = (json) =>
+    let
+        ConvertToTable = Table.FromList(json, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+        //tableresult = Record.ToTable(ConvertToTable),
+        //result = Table.Pivot(tableresult, List.Distinct(tableresult[Name]), "Name", "Value")
+        #"Expanded Column1" = Table.ExpandRecordColumn( ConvertToTable, "Column1", {"type", "data"})
+        //#"Add column" = Table.AddColumn( #"Expanded Column1", "Stream", StravaData.GetStream(stream_uri1, [id], stream_uri2, "heartrate", "Streams"))
+in
+    #"Expanded Column1";
+
+//Parse the streams by json
+ StravaData.StreamsBis = (json) =>
+    let
+        ConvertToTable = Table.FromList(json, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+        #"Expanded Column1" = Table.ExpandRecordColumn( ConvertToTable, "Column1", {"id"}),
+        #"Add column" = Table.AddColumn( #"Expanded Column1", "Stream", each StravaData.GetStream(stream_uri1, "", stream_uri2, "Streams"))
+in
+    #"Add column";
 
 //All of the paging is based off the Tripin Sample https://github.com/Microsoft/DataConnectors/tree/master/samples/TripPin/5-Paging 
 
@@ -142,6 +174,8 @@ in
 // For Strava I added an additional parameter to determine the type of content so we can parse this differently later
 StravaData.GetObject = (relativeUrl as text, contentType as text) => StravaData.PagedReader(api_uri & relativeUrl, contentType);
 
+StravaData.GetStream = (relativeUrl1 as text, id as text, relativeurl2 as text, contentType as text) => StravaData.PagedReader(api_uri & relativeUrl1 & id & relativeurl2 & "/key=distance,time,heartrate,cadence,altitude,velocity_smooth,grade_smooth", contentType);
+
 // Read a single page of data.
 // If we get back an empty list, it means we are out of pages and should return null.
 // For Strava I added an additional parameter to determine the type of content so we can parse this differently later
@@ -151,7 +185,21 @@ StravaData.Page = (url as text, page as number, contentType as text) as nullable
             page = Number.ToText(page),
             page_size = Text.From(page_size)
         ],
+        queryOptionsStreams = [
+            key = "heartrate",
+            key_by_type = "true",
+            page = Number.ToText(page),
+            page_size = Text.From(page_size)
+        ],
+
         content = Web.Contents(url, [ Query = queryOptions ]),
+
+//          content = 
+//              if (contentType = "Streams") then
+//                  Web.Contents(url, [ Query = queryOptionsStreams ])
+//              else
+//                  Web.Contents(url, [ Query = queryOptions ]),
+// 
         json = Json.Document(content),
 
         // Responses from the API will either be a single record, or list of records.
@@ -165,6 +213,10 @@ StravaData.Page = (url as text, page as number, contentType as text) as nullable
                 else //Determine how to parse the JSON based on the type of content.
                     if(contentType = "Activities") then
                         StravaData.Activities(json) meta [NextPage = page + 1]
+                    else if(contentType = "StreamsBis") then
+                        StravaData.StreamsBis(json) meta [NextPage = page + 1]
+                    else if(contentType = "Streams") then
+                        StravaData.Streams(json) meta [NextPage = null]
                     else
                         StravaData.Athlete(json) meta [NextPage = page + 1]
             else
@@ -186,6 +238,7 @@ StravaData.PagedReader = (url as text, contentType as text) =>
         in
             page
     );
+
 
 // This is a modified version of Table.ToNavigationTable to expose the function invocation dialog in the navigator.
 // This works around the issue described here: https://github.com/Microsoft/DataConnectors/issues/30
